@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globalled SST - Saúde e Segurança no Trabalho</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #333; }
+        
+        /* Login */
+        .login-screen { 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            padding: 20px;
+        }
+        .login-container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            width: 100%; 
+            max-width: 400px; 
+        }
+        .login-logo { text-align: center; margin-bottom: 30px; }
+        .login-logo h1 { color: #333; margin-bottom: 5px; font-size: 28px; }
+        .login-logo p { color: #666; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 5px; 
+            font-size: 14px; 
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus { 
+            outline: none; 
+            border-color: #667eea; 
+        }
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: 600; 
+            transition: all 0.3s;
+        }
+        .btn-primary { 
+            background: #667eea; 
+            color: white; 
+            width: 100%; 
+        }
+        .btn-primary:hover { background: #5568d3; }
+        .alert { 
+            padding: 12px; 
+            border-radius: 5px; 
+            margin-top: 15px; 
+            font-size: 14px; 
+        }
+        .alert-error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .hidden { display: none !important; }
+        
+        /* App Layout */
+        .app { display: flex; min-height: 100vh; }
+        .sidebar { 
+            width: 260px; 
+            background: #1a1a2e; 
+            color: white; 
+            position: fixed; 
+            height: 100vh; 
+            overflow-y: auto;
+        }
+        .sidebar-header { 
+            padding: 20px; 
+            border-bottom: 1px solid #333; 
+            font-size: 20px; 
+            font-weight: bold; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-header::before {
+            content: "🏗️";
+            font-size: 24px;
+        }
+        .nav-item { 
+            display: block; 
+            padding: 15px 20px; 
+            color: #b8b8b8; 
+            text-decoration: none; 
+            transition: all 0.3s; 
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover, .nav-item.active { 
+            background: #16213e; 
+            color: white;
+            border-left-color: #667eea;
+        }
+        .main-content { 
+            flex: 1; 
+            margin-left: 260px; 
+            padding: 30px; 
+        }
+        .header { 
+            background: white; 
+            padding: 20px 30px; 
+            margin: -30px -30px 30px -30px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h2 { color: #333; }
+        
+        /* Stats */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+        .stat-card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .stat-card h3 { 
+            font-size: 32px; 
+            color: #667eea; 
+            margin-bottom: 5px; 
+        }
+        .stat-card p { color: #666; font-size: 14px; }
+        
+        /* Cards */
+        .card { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 25px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card h3 { 
+            color: #333; 
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Tables */
+        .table-container { overflow-x: auto; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+        }
+        th { 
+            background: #f8f9fa; 
+            font-weight: 600; 
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        tr:hover { background: #f8f9fa; }
+        
+        /* Page control */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* Buttons */
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        
+        .page-actions {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-container">
+            <div class="login-logo">
+                <h1>Globalled SST</h1>
+                <p>Saúde e Segurança no Trabalho</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" required placeholder="admin@globalledsst.com.br" value="admin@globalledsst.com.br">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="login-senha" required placeholder="admin123" value="admin123">
+                </div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+            </form>
+            <div id="login-error" class="alert alert-error hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">Globalled SST</div>
+            <nav>
+                <a href="#" class="nav-item active" onclick="showPage('dashboard', this)">📊 Dashboard</a>
+                <a href="#" class="nav-item" onclick="showPage('empresas', this)">🏢 Empresas</a>
+                <a href="#" class="nav-item" onclick="showPage('funcionarios', this)">👷 Funcionários</a>
+                <a href="#" class="nav-item" onclick="showPage('exames', this)">🩺 Exames (S-2220)</a>
+                <a href="#" class="nav-item" onclick="showPage('acidentes', this)">🚑 Acidentes (S-2210)</a>
+                <a href="#" class="nav-item" onclick="logout()">🚪 Sair</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h2 id="page-title">Dashboard</h2>
+                <button class="btn btn-secondary" onclick="location.reload()">🔄 Atualizar</button>
+            </div>
+
+            <!-- Dashboard -->
+            <div id="page-dashboard" class="page active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="stat-empresas">0</h3>
+                        <p>Empresas Ativas</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-funcionarios">0</h3>
+                        <p>Funcionários</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-exames">0</h3>
+                        <p>Exames Pendentes</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-acidentes">0</h3>
+                        <p>CATs Pendentes</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>🏗️ Bem-vindo à Globalled SST!</h3>
+                    <p>Sistema completo para gestão de Saúde e Segurança no Trabalho com integração e-Social.</p>
+                    <br>
+                    <p><strong>Funcionalidades principais:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li>✅ Cadastro de empresas e funcionários</li>
+                        <li>✅ Registro de exames ocupacionais (ASO) - S-2220</li>
+                        <li>✅ Comunicação de acidentes de trabalho (CAT) - S-2210</li>
+                        <li>✅ Gestão de riscos ocupacionais (GHE) - S-2240</li>
+                        <li>✅ Upload de documentos (PGR, PCMSO, LTCAT, PPP)</li>
+                        <li>✅ Geração de XML para envio ao e-Social</li>
+                    </ul>
+                    <br>
+                    <p><strong>Login padrão:</strong></p>
+                    <p>Email: admin@globalledsst.com.br</p>
+                    <p>Senha: admin123</p>
+                    <p style="color: #dc2626; margin-top: 10px;">⚠️ Altere a senha após o primeiro login!</p>
+                </div>
+            </div>
+
+            <!-- Empresas -->
+            <div id="page-empresas" class="page">
+                <div class="page-actions">
+                    <button class="btn btn-success" onclick="alert('Funcionalidade em desenvolvimento')">➕ Nova Empresa</button>
+                </div>
+                <div class="card">
+                    <h3>🏢 Empresas Cadastradas</h3>
+                    <div class="table-container">
+                        <table id="table-empresas">
+                            <thead>
+                                <tr>
+                                    <th>Razão Social</th>
+                                    <th>CNPJ</th>
+                                    <th>Cidade</th>
+                                    <th>Estado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Funcionários -->
+            <div id="page-funcionarios" class="page">
+                <div class="page-actions">
+                    <button class="btn btn-success" onclick="alert('Funcionalidade em desenvolvimento')">➕ Novo Funcionário</button>
+                </div>
+                <div class="card">
+                    <h3>👷 Funcionários</h3>
+                    <div class="table-container">
+                        <table id="table-funcionarios">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>CPF</th>
+                                    <th>Matrícula</th>
+                                    <th>Função</th>
+                                    <th>Empresa</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exames -->
+            <div id="page-exames" class="page">
+                <div class="page-actions">
+                    <button class="btn btn-success" onclick="alert('Funcionalidade em desenvolvimento')">➕ Novo Exame</button>
+                </div>
+                <div class="card">
+                    <h3>🩺 Exames Pendentes (S-2220)</h3>
+                    <div class="table-container">
+                        <table id="table-exames">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Tipo</th>
+                                    <th>Data</th>
+                                    <th>Médico</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acidentes -->
+            <div id="page-acidentes" class="page">
+                <div class="page-actions">
+                    <button class="btn btn-success" onclick="alert('Funcionalidade em desenvolvimento')">➕ Registrar Acidente</button>
+                </div>
+                <div class="card">
+                    <h3>🚑 Acidentes Pendentes (S-2210)</h3>
+                    <div class="table-container">
+                        <table id="table-acidentes">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Local</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let authToken = localStorage.getItem('token');
+
+        // Login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, senha})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    showApp();
+                    loadDashboard();
+                } else {
+                    const errorDiv = document.getElementById('login-error');
+                    errorDiv.textContent = data.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.textContent = 'Erro ao conectar com servidor';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        function showPage(pageName, element) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Show selected page
+            document.getElementById(`page-${pageName}`).classList.add('active');
+            // Update menu
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (element) element.classList.add('active');
+            // Update title
+            const titles = {
+                'dashboard': 'Dashboard',
+                'empresas': 'Empresas',
+                'funcionarios': 'Funcionários',
+                'exames': 'Exames Ocupacionais',
+                'acidentes': 'Acidentes de Trabalho'
+            };
+            document.getElementById('page-title').textContent = titles[pageName] || pageName;
+            // Load data
+            if (pageName === 'dashboard') loadDashboard();
+            if (pageName === 'empresas') loadEmpresas();
+            if (pageName === 'funcionarios') loadFuncionarios();
+            if (pageName === 'exames') loadExames();
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API_URL}/dashboard`, {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('stat-empresas').textContent = data.data.total_empresas;
+                    document.getElementById('stat-funcionarios').textContent = data.data.total_funcionarios;
+                    document.getElementById('stat-exames').textContent = data.data.exames_pendentes;
+                    document.getElementById('stat-acidentes').textContent = data.data.acidentes_pendentes;
+                }
+            } catch (err) {
+                console.error('Erro ao carregar dashboard:', err);
+            }
+        }
+
+        async function loadEmpresas() {
+            try {
+                const res = await fetch(`${API_URL}/empresas`, {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const tbody = document.querySelector('#table-empresas tbody');
+                    tbody.innerHTML = data.data.map(e => `
+                        <tr>
+                            <td>${e.razao_social}</td>
+                            <td>${formatCNPJ(e.cnpj)}</td>
+                            <td>${e.cidade || '-'}</td>
+                            <td>${e.estado || '-'}</td>
+                            <td><button class="btn btn-secondary" onclick="alert('Ver detalhes')">👁️</button></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar empresas:', err);
+            }
+        }
+
+        async function loadFuncionarios() {
+            try {
+                const res = await fetch(`${API_URL}/funcionarios`, {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const tbody = document.querySelector('#table-funcionarios tbody');
+                    tbody.innerHTML = data.data.map(f => `
+                        <tr>
+                            <td>${f.nome}</td>
+                            <td>${formatCPF(f.cpf)}</td>
+                            <td>${f.matricula}</td>
+                            <td>${f.funcao || '-'}</td>
+                            <td>${f.nome_empresa}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar funcionários:', err);
+            }
+        }
+
+        async function loadExames() {
+            try {
+                const res = await fetch(`${API_URL}/exames/pendentes`, {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const tbody = document.querySelector('#table-exames tbody');
+                    const tipos = ['Admissional', 'Periódico', 'Retorno', 'Mudança Função', 'Demissional', 'Outros'];
+                    tbody.innerHTML = data.data.map(ex => `
+                        <tr>
+                            <td>${ex.nome_funcionario}</td>
+                            <td>${tipos[ex.tipo_exame] || 'Outros'}</td>
+                            <td>${formatDate(ex.dt_exame)}</td>
+                            <td>${ex.nm_med || '-'}</td>
+                            <td><button class="btn btn-success" onclick="alert('Gerar XML')">📄 XML</button></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar exames:', err);
+            }
+        }
+
+        function formatCNPJ(cnpj) {
+            if (!cnpj) return '-';
+            return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+        }
+
+        function formatCPF(cpf) {
+            if (!cpf) return '-';
+            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('pt-BR');
+        }
+
+        // Auto-login if token exists
+        if (authToken) {
+            showApp();
+            loadDashboard();
+        }
+    </script>
+</body>
+</html>
