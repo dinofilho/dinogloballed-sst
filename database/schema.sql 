@@ -1,0 +1,295 @@
+-- Globalled SST - Database Schema
+-- Execute este arquivo no PostgreSQL para criar as tabelas
+
+-- Tabela: Usuários do Sistema
+CREATE TABLE IF NOT EXISTS usuarios (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    senha_hash VARCHAR(255) NOT NULL,
+    perfil VARCHAR(20) DEFAULT 'consultor',
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Empresas Clientes
+CREATE TABLE IF NOT EXISTS empresas (
+    id SERIAL PRIMARY KEY,
+    razao_social VARCHAR(200) NOT NULL,
+    nome_fantasia VARCHAR(200),
+    cnpj VARCHAR(14) UNIQUE NOT NULL,
+    inscricao_estadual VARCHAR(20),
+    inscricao_municipal VARCHAR(20),
+    endereco TEXT,
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(8),
+    telefone VARCHAR(20),
+    email VARCHAR(100),
+    tp_inscricao INTEGER DEFAULT 1,
+    nr_inscricao VARCHAR(14),
+    responsavel_nome VARCHAR(100),
+    responsavel_cpf VARCHAR(11),
+    responsavel_cargo VARCHAR(50),
+    ativo BOOLEAN DEFAULT TRUE,
+    data_cadastro DATE DEFAULT CURRENT_DATE,
+    usuario_id INTEGER REFERENCES usuarios(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Estabelecimentos (filiais)
+CREATE TABLE IF NOT EXISTS estabelecimentos (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+    nome VARCHAR(200) NOT NULL,
+    cnpj_cpf VARCHAR(14),
+    tipo_inscricao INTEGER DEFAULT 1,
+    endereco TEXT,
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(8),
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Funcionários
+CREATE TABLE IF NOT EXISTS funcionarios (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+    estabelecimento_id INTEGER REFERENCES estabelecimentos(id),
+    nome VARCHAR(200) NOT NULL,
+    cpf VARCHAR(11) UNIQUE NOT NULL,
+    rg VARCHAR(20),
+    orgao_emissor VARCHAR(10),
+    data_nascimento DATE,
+    sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
+    raca_cor INTEGER,
+    estado_civil INTEGER,
+    grau_instrucao INTEGER,
+    nacionalidade VARCHAR(50),
+    naturalidade VARCHAR(100),
+    nome_mae VARCHAR(200),
+    nome_pai VARCHAR(200),
+    matricula VARCHAR(30) NOT NULL,
+    cod_categ INTEGER,
+    dt_adm DATE,
+    dt_dem DATE,
+    tipo_contrato INTEGER,
+    tipo_jornada INTEGER,
+    salario DECIMAL(10,2),
+    unidade_salario INTEGER,
+    cbo VARCHAR(6),
+    funcao VARCHAR(100),
+    endereco TEXT,
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(8),
+    telefone VARCHAR(20),
+    celular VARCHAR(20),
+    email VARCHAR(100),
+    ativo BOOLEAN DEFAULT TRUE,
+    situacao_esocial VARCHAR(20) DEFAULT 'ativo',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(empresa_id, matricula)
+);
+
+-- Tabela: Grupos Homogêneos de Exposição (GHE)
+CREATE TABLE IF NOT EXISTS grupos_homogeneos (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+    estabelecimento_id INTEGER REFERENCES estabelecimentos(id),
+    codigo_ghe VARCHAR(20) NOT NULL,
+    descricao TEXT NOT NULL,
+    funcoes TEXT[],
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(empresa_id, codigo_ghe)
+);
+
+-- Tabela: Agentes Nocivos (Tabela 24 e-Social)
+CREATE TABLE IF NOT EXISTS agentes_nocivos (
+    id SERIAL PRIMARY KEY,
+    grupo_id INTEGER REFERENCES grupos_homogeneos(id) ON DELETE CASCADE,
+    cod_agente VARCHAR(9) NOT NULL,
+    dsc_agente TEXT,
+    tp_exposicao INTEGER CHECK (tp_exposicao IN (1, 2)),
+    tp_intensidade INTEGER CHECK (tp_intensidade IN (1, 2, 3)),
+    tp_insalubridade INTEGER CHECK (tp_insalubridade IN (1, 2, 3, 4)),
+    tp_periculosidade INTEGER CHECK (tp_periculosidade IN (1, 2)),
+    tp_aposent_esp INTEGER CHECK (tp_aposent_esp IN (1, 2)),
+    utiliz_epi BOOLEAN DEFAULT FALSE,
+    epi_eficaz BOOLEAN DEFAULT FALSE,
+    epi_ca VARCHAR(20),
+    epi_descricao TEXT,
+    epi_mot_inat INTEGER,
+    utiliz_epc BOOLEAN DEFAULT FALSE,
+    epc_eficaz BOOLEAN DEFAULT FALSE,
+    epc_descricao TEXT,
+    epc_mot_inat INTEGER,
+    nr_med_protecao_coletiva VARCHAR(20),
+    nr_med_epc_eficaz VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Exames Ocupacionais (ASO) - S-2220
+CREATE TABLE IF NOT EXISTS exames (
+    id SERIAL PRIMARY KEY,
+    funcionario_id INTEGER REFERENCES funcionarios(id) ON DELETE CASCADE,
+    tipo_exame INTEGER CHECK (tipo_exame IN (0, 1, 2, 3, 4, 9)),
+    dt_exame DATE NOT NULL,
+    dt_ini_monit DATE,
+    dt_fim_monit DATE,
+    nm_med VARCHAR(100),
+    nr_consclasse VARCHAR(20),
+    uf_consclasse CHAR(2),
+    nr_crm VARCHAR(20),
+    uf_crm CHAR(2),
+    ind_result INTEGER CHECK (ind_result IN (1, 2, 3, 4)),
+    exames_realizados INTEGER[],
+    obs TEXT,
+    enviado_esocial BOOLEAN DEFAULT FALSE,
+    protocolo_envio VARCHAR(50),
+    data_envio TIMESTAMP,
+    recibo_esocial VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Acidentes de Trabalho (CAT) - S-2210
+CREATE TABLE IF NOT EXISTS acidentes (
+    id SERIAL PRIMARY KEY,
+    funcionario_id INTEGER REFERENCES funcionarios(id) ON DELETE CASCADE,
+    dt_acid DATE NOT NULL,
+    tp_acid INTEGER CHECK (tp_acid IN (1, 2, 3)),
+    hr_acid TIME,
+    hrs_trab_antes_acid VARCHAR(4),
+    tp_local INTEGER CHECK (tp_local IN (1, 2, 3, 4, 5, 6, 9)),
+    dsc_local TEXT,
+    tp_lograd VARCHAR(50),
+    dsc_lograd VARCHAR(100),
+    nr_lograd VARCHAR(10),
+    complemento VARCHAR(50),
+    bairro VARCHAR(50),
+    cep VARCHAR(8),
+    cod_munic INTEGER,
+    uf CHAR(2),
+    cod_natureza INTEGER,
+    dsc_natureza TEXT,
+    cod_parte INTEGER,
+    dsc_parte TEXT,
+    agente_causador_cod INTEGER,
+    agente_causador_dsc TEXT,
+    sit_geradora INTEGER,
+    dsc_sit_geradora TEXT,
+    dsc_acidente TEXT NOT NULL,
+    cat_numero VARCHAR(20),
+    cat_dt_emissao DATE,
+    cat_tp_cat INTEGER CHECK (cat_tp_cat IN (1, 2, 3)),
+    cat_tp_insc VARCHAR(1),
+    cat_nr_insc VARCHAR(14),
+    atestado_dt_atendimento DATE,
+    atestado_hr_atendimento TIME,
+    atestado_ind_internacao INTEGER CHECK (atestado_ind_internacao IN (1, 2)),
+    atestado_duracao INTEGER,
+    atestado_ind_afast INTEGER CHECK (atestado_ind_afast IN (1, 2, 3)),
+    atestado_obs TEXT,
+    atestado_nm_med VARCHAR(100),
+    atestado_nr_consclasse VARCHAR(20),
+    atestado_uf_consclasse CHAR(2),
+    atestado_nr_crm VARCHAR(20),
+    atestado_uf_crm CHAR(2),
+    ind_comunic_policial INTEGER CHECK (ind_comunic_policial IN (1, 2)),
+    obs_comunic_policial TEXT,
+    enviado_esocial BOOLEAN DEFAULT FALSE,
+    protocolo_envio VARCHAR(50),
+    data_envio TIMESTAMP,
+    recibo_esocial VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Documentos SST (PGR, PCMSO, LTCAT, PPP)
+CREATE TABLE IF NOT EXISTS documentos_sst (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+    funcionario_id INTEGER REFERENCES funcionarios(id) ON DELETE SET NULL,
+    tipo_documento VARCHAR(10) CHECK (tipo_documento IN ('PGR', 'PCMSO', 'LTCAT', 'PPP', 'ASO', 'OUTROS')),
+    numero_documento VARCHAR(50),
+    data_elaboracao DATE,
+    data_validade DATE,
+    nome_arquivo VARCHAR(255),
+    caminho_arquivo TEXT,
+    tamanho_arquivo INTEGER,
+    mime_type VARCHAR(50),
+    responsavel_nome VARCHAR(100),
+    responsavel_registro VARCHAR(20),
+    responsavel_uf CHAR(2),
+    observacoes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Log de Envios e-Social
+CREATE TABLE IF NOT EXISTS log_envios_esocial (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER REFERENCES empresas(id),
+    tipo_evento VARCHAR(10) NOT NULL,
+    id_registro INTEGER NOT NULL,
+    xml_enviado TEXT,
+    protocolo_envio VARCHAR(50),
+    data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status_envio VARCHAR(20),
+    codigo_retorno VARCHAR(10),
+    descricao_retorno TEXT,
+    recibo_esocial VARCHAR(50),
+    xml_retorno TEXT,
+    evento_correcao VARCHAR(10),
+    protocolo_correcao VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela: Configurações do Sistema
+CREATE TABLE IF NOT EXISTS configuracoes (
+    id SERIAL PRIMARY KEY,
+    chave VARCHAR(50) UNIQUE NOT NULL,
+    valor TEXT,
+    descricao TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_funcionarios_empresa ON funcionarios(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_funcionarios_cpf ON funcionarios(cpf);
+CREATE INDEX IF NOT EXISTS idx_exames_funcionario ON exames(funcionario_id);
+CREATE INDEX IF NOT EXISTS idx_acidentes_funcionario ON acidentes(funcionario_id);
+CREATE INDEX IF NOT EXISTS idx_agentes_grupo ON agentes_nocivos(grupo_id);
+
+-- Views úteis
+CREATE OR REPLACE VIEW view_funcionarios_ativos AS
+SELECT f.*, e.razao_social as nome_empresa
+FROM funcionarios f
+JOIN empresas e ON f.empresa_id = e.id
+WHERE f.ativo = TRUE;
+
+CREATE OR REPLACE VIEW view_exames_pendentes_envio AS
+SELECT e.*, f.nome as nome_funcionario, f.cpf, f.matricula, emp.razao_social
+FROM exames e
+JOIN funcionarios f ON e.funcionario_id = f.id
+JOIN empresas emp ON f.empresa_id = emp.id
+WHERE e.enviado_esocial = FALSE;
+
+-- Dados iniciais
+INSERT INTO configuracoes (chave, valor, descricao) VALUES
+('versao_sistema', '1.0.0', 'Versão atual do sistema'),
+('ambiente_esocial', 'producao', 'Ambiente e-Social: producao ou homologacao'),
+('cnpj_transmissor', '', 'CNPJ do transmissor autorizado para envio'),
+('caminho_certificado', '', 'Caminho do certificado digital A1 ou A3'),
+('senha_certificado', '', 'Senha do certificado digital')
+ON CONFLICT (chave) DO NOTHING;
+
+-- Usuário admin padrão (senha: admin123 - mudar na primeira execução!)
+-- Senha hasheada com bcrypt
+INSERT INTO usuarios (nome, email, senha_hash, perfil) VALUES
+('Administrador', 'admin@globalledsst.com.br', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKyNiAYMyzJ/I1K', 'admin')
+ON CONFLICT (email) DO NOTHING;
