@@ -1,0 +1,314 @@
+"""
+Globalled SST - Gerador de XML para e-Social
+Gera XMLs válidos conforme leiautes oficiais:
+- S-2210: Comunicação de Acidente de Trabalho
+- S-2220: Monitoramento da Saúde do Trabalhador  
+- S-2240: Condições Ambientais do Trabalho
+"""
+
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+from datetime import datetime
+import uuid
+
+
+def prettify_xml(elem):
+    """Retorna XML formatado com indentação"""
+    rough_string = ET.tostring(elem, encoding='unicode')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent="  ")
+
+
+def gerar_id_evento():
+    """Gera ID único para o evento e-Social"""
+    return f"ID{datetime.now().strftime('%Y%m%d%H%M%S')}{str(uuid.uuid4())[:23].upper()}"
+
+
+def gerar_s2210(dados):
+    """
+    Gera XML do evento S-2210 - Comunicação de Acidente de Trabalho
+    Leiaute: evtCAT
+    """
+    # Criar elemento raiz
+    root = ET.Element("eSocial", xmlns="http://www.esocial.gov.br/schema/evt/evtCAT/v_S_01_03_00")
+    
+    # Evento
+    evtCAT = ET.SubElement(root, "evtCAT", Id=gerar_id_evento())
+    
+    # IdeEvento
+    ideEvento = ET.SubElement(evtCAT, "ideEvento")
+    ET.SubElement(ideEvento, "indRetif").text = "1"  # 1=Original, 2=Retificação
+    ET.SubElement(ideEvento, "tpAmb").text = "2"  # 1=Produção, 2=Homologação
+    ET.SubElement(ideEvento, "procEmi").text = "1"  # 1=Aplicativo empregador
+    ET.SubElement(ideEvento, "verProc").text = "1.0.0"
+    
+    # IdeEmpregador
+    ideEmpregador = ET.SubElement(evtCAT, "ideEmpregador")
+    ET.SubElement(ideEmpregador, "tpInsc").text = "1"  # 1=CNPJ
+    ET.SubElement(ideEmpregador, "nrInsc").text = dados.get('nr_inscricao', dados.get('cnpj_empresa', ''))[:8]
+    
+    # IdeVinculo
+    ideVinculo = ET.SubElement(evtCAT, "ideVinculo")
+    ET.SubElement(ideVinculo, "cpfTrab").text = dados.get('cpf', '')
+    ET.SubElement(ideVinculo, "matricula").text = dados.get('matricula', '')
+    
+    # CAT
+    cat = ET.SubElement(evtCAT, "cat")
+    dt_acid = dados.get('dt_acid')
+    if hasattr(dt_acid, 'strftime'):
+        ET.SubElement(cat, "dtAcid").text = dt_acid.strftime('%Y-%m-%d')
+    else:
+        ET.SubElement(cat, "dtAcid").text = str(dt_acid)[:10]
+    
+    ET.SubElement(cat, "tpAcid").text = str(dados.get('tp_acid', '1'))
+    
+    if dados.get('hr_acid'):
+        hr = dados.get('hr_acid')
+        if hasattr(hr, 'strftime'):
+            ET.SubElement(cat, "hrAcid").text = hr.strftime('%H:%M:%S')
+    
+    if dados.get('hrs_trab_antes_acid'):
+        ET.SubElement(cat, "hrsTrabAntesAcid").text = str(dados.get('hrs_trab_antes_acid', ''))
+    
+    # Local
+    local = ET.SubElement(cat, "localAcidente")
+    ET.SubElement(local, "tpLocal").text = str(dados.get('tp_local', '1'))
+    if dados.get('dsc_local'):
+        ET.SubElement(local, "dscLocal").text = dados.get('dsc_local', '')
+    
+    # Endereço
+    if dados.get('tp_lograd'):
+        ET.SubElement(local, "tpLograd").text = dados.get('tp_lograd', '')
+    if dados.get('dsc_lograd'):
+        ET.SubElement(local, "dscLograd").text = dados.get('dsc_lograd', '')
+    if dados.get('nr_lograd'):
+        ET.SubElement(local, "nrLograd").text = dados.get('nr_lograd', '')
+    if dados.get('complemento'):
+        ET.SubElement(local, "complemento").text = dados.get('complemento', '')
+    if dados.get('bairro'):
+        ET.SubElement(local, "bairro").text = dados.get('bairro', '')
+    if dados.get('cep'):
+        ET.SubElement(local, "cep").text = dados.get('cep', '')
+    if dados.get('cod_munic'):
+        ET.SubElement(local, "codMunic").text = str(dados.get('cod_munic', ''))
+    if dados.get('uf'):
+        ET.SubElement(local, "uf").text = dados.get('uf', '')
+    
+    # Parte atingida
+    if dados.get('cod_parte'):
+        parte = ET.SubElement(cat, "parteAtingida")
+        ET.SubElement(parte, "codParte").text = str(dados.get('cod_parte', ''))
+        if dados.get('dsc_parte'):
+            ET.SubElement(parte, "dscParte").text = dados.get('dsc_parte', '')
+    
+    # Agente causador
+    if dados.get('agente_causador_cod'):
+        agente = ET.SubElement(cat, "agenteCausador")
+        ET.SubElement(agente, "codAgntCausador").text = str(dados.get('agente_causador_cod', ''))
+        if dados.get('agente_causador_dsc'):
+            ET.SubElement(agente, "dscAgntCausador").text = dados.get('agente_causador_dsc', '')
+    
+    # Natureza lesão
+    if dados.get('cod_natureza'):
+        nat = ET.SubElement(cat, "natLesao")
+        ET.SubElement(nat, "natLesao").text = str(dados.get('cod_natureza', ''))
+        if dados.get('dsc_natureza'):
+            ET.SubElement(nat, "dscNatLesao").text = dados.get('dsc_natureza', '')
+    
+    # Descrição
+    ET.SubElement(cat, "dscLesao").text = dados.get('dsc_acidente', '')
+    
+    # CAT emitida
+    if dados.get('cat_numero'):
+        cat_emit = ET.SubElement(cat, "catEmitente")
+        ET.SubElement(cat_emit, "nrCat").text = dados.get('cat_numero', '')
+        if dados.get('cat_dt_emissao'):
+            dt_emissao = dados.get('cat_dt_emissao')
+            if hasattr(dt_emissao, 'strftime'):
+                ET.SubElement(cat_emit, "dtEmissao").text = dt_emissao.strftime('%Y-%m-%d')
+        ET.SubElement(cat_emit, "tpCat").text = str(dados.get('cat_tp_cat', '1'))
+        if dados.get('cat_tp_insc'):
+            ET.SubElement(cat_emit, "tpInsc").text = dados.get('cat_tp_insc', '')
+        if dados.get('cat_nr_insc'):
+            ET.SubElement(cat_emit, "nrInsc").text = dados.get('cat_nr_insc', '')
+    
+    # Atestado médico
+    if dados.get('atestado_dt_atendimento'):
+        atest = ET.SubElement(cat, "atestado")
+        dt_atend = dados.get('atestado_dt_atendimento')
+        if hasattr(dt_atend, 'strftime'):
+            ET.SubElement(atest, "dtAtendimento").text = dt_atend.strftime('%Y-%m-%d')
+        
+        if dados.get('atestado_hr_atendimento'):
+            hr_atend = dados.get('atestado_hr_atendimento')
+            if hasattr(hr_atend, 'strftime'):
+                ET.SubElement(atest, "hrAtendimento").text = hr_atend.strftime('%H:%M:%S')
+        
+        ET.SubElement(atest, "indInternacao").text = str(dados.get('atestado_ind_internacao', '2'))
+        
+        if dados.get('atestado_duracao'):
+            ET.SubElement(atest, "durTrat").text = str(dados.get('atestado_duracao', ''))
+        
+        ET.SubElement(atest, "indAfast").text = str(dados.get('atestado_ind_afast', '2'))
+        
+        if dados.get('atestado_obs'):
+            ET.SubElement(atest, "observacao").text = dados.get('atestado_obs', '')
+        
+        # Médico
+        if dados.get('atestado_nm_med'):
+            med = ET.SubElement(atest, "emitente")
+            ET.SubElement(med, "nmMed").text = dados.get('atestado_nm_med', '')
+            ET.SubElement(med, "nrConsClasse").text = dados.get('atestado_nr_consclasse', '')
+            ET.SubElement(med, "ufConsClasse").text = dados.get('atestado_uf_consclasse', '')
+            if dados.get('atestado_nr_crm'):
+                ET.SubElement(med, "nrCRM").text = dados.get('atestado_nr_crm', '')
+            if dados.get('atestado_uf_crm'):
+                ET.SubElement(med, "ufCRM").text = dados.get('atestado_uf_crm', '')
+    
+    return prettify_xml(root)
+
+
+def gerar_s2220(dados):
+    """
+    Gera XML do evento S-2220 - Monitoramento da Saúde do Trabalhador (ASO)
+    Leiaute: evtMonit
+    """
+    root = ET.Element("eSocial", xmlns="http://www.esocial.gov.br/schema/evt/evtMonit/v_S_01_03_00")
+    
+    evtMonit = ET.SubElement(root, "evtMonit", Id=gerar_id_evento())
+    
+    # IdeEvento
+    ideEvento = ET.SubElement(evtMonit, "ideEvento")
+    ET.SubElement(ideEvento, "indRetif").text = "1"
+    ET.SubElement(ideEvento, "tpAmb").text = "2"
+    ET.SubElement(ideEvento, "procEmi").text = "1"
+    ET.SubElement(ideEvento, "verProc").text = "1.0.0"
+    
+    # IdeEmpregador
+    ideEmpregador = ET.SubElement(evtMonit, "ideEmpregador")
+    ET.SubElement(ideEmpregador, "tpInsc").text = "1"
+    ET.SubElement(ideEmpregador, "nrInsc").text = dados.get('nr_inscricao', dados.get('cnpj_empresa', ''))[:8]
+    
+    # IdeVinculo
+    ideVinculo = ET.SubElement(evtMonit, "ideVinculo")
+    ET.SubElement(ideVinculo, "cpfTrab").text = dados.get('cpf', '')
+    ET.SubElement(ideVinculo, "matricula").text = dados.get('matricula', '')
+    
+    # Exame
+    exame = ET.SubElement(evtMonit, "exame")
+    dt_exame = dados.get('dt_exame')
+    if hasattr(dt_exame, 'strftime'):
+        ET.SubElement(exame, "dtExame").text = dt_exame.strftime('%Y-%m-%d')
+    else:
+        ET.SubElement(exame, "dtExame").text = str(dt_exame)[:10]
+    
+    # Tipo exame
+    tpExame = ET.SubElement(exame, "tpExame")
+    ET.SubElement(tpExame, "tpExameOcup").text = str(dados.get('tipo_exame', '0'))
+    
+    if dados.get('dt_ini_monit'):
+        dt_ini = dados.get('dt_ini_monit')
+        if hasattr(dt_ini, 'strftime'):
+            ET.SubElement(exame, "dtIniMonit").text = dt_ini.strftime('%Y-%m-%d')
+    
+    if dados.get('dt_fim_monit'):
+        dt_fim = dados.get('dt_fim_monit')
+        if hasattr(dt_fim, 'strftime'):
+            ET.SubElement(exame, "dtFimMonit").text = dt_fim.strftime('%Y-%m-%d')
+    
+    # Médico
+    if dados.get('nm_med'):
+        medico = ET.SubElement(exame, "medico")
+        ET.SubElement(medico, "nmMed").text = dados.get('nm_med', '')
+        ET.SubElement(medico, "nrConsClasse").text = dados.get('nr_consclasse', '')
+        ET.SubElement(medico, "ufConsClasse").text = dados.get('uf_consclasse', '')
+        if dados.get('nr_crm'):
+            ET.SubElement(medico, "nrCRM").text = dados.get('nr_crm', '')
+        if dados.get('uf_crm'):
+            ET.SubElement(medico, "ufCRM").text = dados.get('uf_crm', '')
+    
+    # Resultado
+    if dados.get('ind_result'):
+        ET.SubElement(exame, "indResult").text = str(dados.get('ind_result', ''))
+    
+    # Exames realizados
+    if dados.get('exames_realizados'):
+        for cod_exame in dados.get('exames_realizados', []):
+            ex = ET.SubElement(exame, "exame")
+            ET.SubElement(ex, "codExame").text = str(cod_exame)
+    
+    # Observações
+    if dados.get('obs'):
+        ET.SubElement(exame, "obs").text = dados.get('obs', '')
+    
+    return prettify_xml(root)
+
+
+def gerar_s2240(dados):
+    """
+    Gera XML do evento S-2240 - Condições Ambientais do Trabalho
+    Leiaute: evtExpRisco
+    """
+    root = ET.Element("eSocial", xmlns="http://www.esocial.gov.br/schema/evt/evtExpRisco/v_S_01_03_00")
+    
+    evtExpRisco = ET.SubElement(root, "evtExpRisco", Id=gerar_id_evento())
+    
+    # IdeEvento
+    ideEvento = ET.SubElement(evtExpRisco, "ideEvento")
+    ET.SubElement(ideEvento, "indRetif").text = "1"
+    ET.SubElement(ideEvento, "tpAmb").text = "2"
+    ET.SubElement(ideEvento, "procEmi").text = "1"
+    ET.SubElement(ideEvento, "verProc").text = "1.0.0"
+    
+    # IdeEmpregador
+    ideEmpregador = ET.SubElement(evtExpRisco, "ideEmpregador")
+    ET.SubElement(ideEmpregador, "tpInsc").text = "1"
+    ET.SubElement(ideEmpregador, "nrInsc").text = dados.get('nr_inscricao', dados.get('cnpj_empresa', ''))[:8]
+    
+    # InfoExpRisco
+    infoExpRisco = ET.SubElement(evtExpRisco, "infoExpRisco")
+    
+    # Agente nocivos
+    for agente in dados.get('agentes', []):
+        agNoc = ET.SubElement(infoExpRisco, "agNoc")
+        ET.SubElement(agNoc, "codAgNoc").text = agente.get('cod_agente', '')
+        if agente.get('dsc_agente'):
+            ET.SubElement(agNoc, "dscAgNoc").text = agente.get('dsc_agente', '')
+        
+        ET.SubElement(agNoc, "tpExposicao").text = str(agente.get('tp_exposicao', '1'))
+        ET.SubElement(agNoc, "tpIntensidade").text = str(agente.get('tp_intensidade', '1'))
+        
+        if agente.get('tp_insalubridade'):
+            ET.SubElement(agNoc, "tpInsalubridade").text = str(agente.get('tp_insalubridade', ''))
+        if agente.get('tp_periculosidade'):
+            ET.SubElement(agNoc, "tpPericulosidade").text = str(agente.get('tp_periculosidade', ''))
+        if agente.get('tp_aposent_esp'):
+            ET.SubElement(agNoc, "tpAposentEsp").text = str(agente.get('tp_aposent_esp', ''))
+        
+        # EPIs
+        if agente.get('utiliz_epi'):
+            epi = ET.SubElement(agNoc, "epi")
+            ET.SubElement(epi, "utilizEPI").text = "S" if agente.get('epi_eficaz') else "N"
+            if agente.get('epi_ca'):
+                ET.SubElement(epi, "caEPI").text = agente.get('epi_ca', '')
+            if agente.get('epi_descricao'):
+                ET.SubElement(epi, "dscEPI").text = agente.get('epi_descricao', '')
+            if agente.get('epi_mot_inat'):
+                ET.SubElement(epi, "motInat").text = str(agente.get('epi_mot_inat', ''))
+        
+        # EPCs
+        if agente.get('utiliz_epc'):
+            epc = ET.SubElement(agNoc, "epc")
+            ET.SubElement(epc, "utilizEPC").text = "S" if agente.get('epc_eficaz') else "N"
+            if agente.get('epc_descricao'):
+                ET.SubElement(epc, "dscEPC").text = agente.get('epc_descricao', '')
+            if agente.get('epc_mot_inat'):
+                ET.SubElement(epc, "motInat").text = str(agente.get('epc_mot_inat', ''))
+        
+        # Metragens para ruído
+        if agente.get('nr_med_protecao_coletiva'):
+            ET.SubElement(agNoc, "nrMedProtecaoColetiva").text = agente.get('nr_med_protecao_coletiva', '')
+        if agente.get('nr_med_epc_eficaz'):
+            ET.SubElement(agNoc, "nrMedEpcEficaz").text = agente.get('nr_med_epc_eficaz', '')
+    
+    return prettify_xml(root)
